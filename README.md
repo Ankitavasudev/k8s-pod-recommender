@@ -1,92 +1,81 @@
 # K8s Pod Recommender
 
-![CI](https://github.com/Ankitavasudev/k8s-pod-recommender/actions/workflows/ci.yml/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/Ankitavasudev/k8s-pod-recommender)](https://goreportcard.com/report/github.com/Ankitavasudev/k8s-pod-recommender)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+> Kubernetes operator that analyzes pod resource usage and recommends optimal CPU/memory configurations.
 
-A Kubernetes operator that analyzes pod resource usage and recommends optimal CPU/memory limits to prevent OOMKills and improve cluster efficiency.
+[![CI](https://github.com/Ankitavasudev/k8s-pod-recommender/actions/workflows/ci.yml/badge.svg)](https://github.com/Ankitavasudev/k8s-pod-recommender/actions)
+[![Go 1.21+](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## Features
 
-- **Resource Analysis** - Detects missing limits/requests, high CPU/memory ratios
-- **Smart Recommendations** - Suggests optimal resource configurations
-- **Event Recording** - Logs recommendations as Kubernetes events
-- **Real-time Monitoring** - Reconciles every 10 minutes
-- **RBAC** - Least-privilege access to cluster resources
+- **Resource Analysis** - Analyzes actual CPU/memory usage patterns
+- **Smart Recommendations** - Suggests optimal resource limits based on usage
+- **RBAC Support** - Proper role-based access control
+- **CRD-based** - Custom Resource Definitions for Kubernetes-native workflow
+- **Controller Loop** - Continuous monitoring and recommendation updates
 
-## Installation
+## Quick Start
 
-`ash
-kubectl apply -f deploy/rbac.yaml
-kubectl apply -f deploy/deployment.yaml
-`
+```bash
+# Install
+git clone https://github.com/Ankitavasudev/k8s-pod-recommender.git
+cd k8s-pod-recommender
+
+# Build
+go build -o pod-recommender .
+
+# Run locally
+./pod-recommender
+
+# Deploy to Kubernetes
+kubectl apply -f deploy/
+```
 
 ## How It Works
 
-1. Operator watches all running pods
-2. Analyzes resource requests vs limits
-3. Detects:
-   - Missing CPU/memory limits
-   - Missing CPU/memory requests
-   - High CPU limit ratio (>10x request)
-   - High memory limit ratio (>4x request)
-4. Emits recommendations as Kubernetes events
-5. Re-queues for next analysis in 10 minutes
+1. **Observe** - Monitors pod resource requests vs actual usage
+2. **Analyze** - Calculates utilization ratios and trends
+3. **Recommend** - Suggests optimal CPU/memory configurations
+4. **Apply** - Optionally auto-adjusts resource limits
 
-## Detection Rules
+## RBAC Permissions
 
-| Rule | Condition | Recommendation |
-|------|-----------|----------------|
-| MissingLimits | No CPU/memory limits | Set resource limits |
-| MissingRequests | No CPU/memory requests | Set resource requests |
-| HighCpuRatio | CPU limit > 10x request | Reduce CPU limit |
-| HighMemoryRatio | Memory limit > 4x request | Reduce memory limit |
-
-## Example Output
-
-`
-Pod: default/nginx-abc123
-  Status: Running | Restarts: 0 | Node: node-1 | Age: 5d
-  Resource Recommendations:
-    Container app: Set resource limits (current: None)
-    Container app: Set resource requests (current: None)
-`
-
-## Development
-
-`ash
-# Run tests
-go test -v ./...
-
-# Build
-go build -v ./...
-
-# Run locally
-go run . --metrics-bind-address=:8080
-`
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-recommender
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+```
 
 ## Architecture
 
-`
-Operator Manager
-    |
-    v
-Reconciler Loop
-    |
-    v
-Pod Analysis
-    |
-    v
-Resource Recommendations
-    |
-    v
-Kubernetes Events
-`
+```
+k8s-pod-recommender/
+├── main.go           # Controller entry point
+├── recommender.go    # Recommendation engine
+├── analyzer.go       # Resource usage analysis
+├── deploy/           # Kubernetes manifests
+├── rbac/             # RBAC configuration
+├── tests/            # Unit and integration tests
+├── Dockerfile        # Container build
+└── .github/workflows/ # CI/CD pipeline
+```
 
-## Contributing
+## Tech Stack
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+- **Go 1.21+** - Core language
+- **controller-runtime** - Kubernetes controller framework
+- **client-go** - Kubernetes API client
+- **metrics-server** - Resource usage metrics
+- **Docker** - Container packaging
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
