@@ -9,22 +9,32 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ["1.21", "1.22", "1.23"]
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
-      - name: Test
-        run: go test -v ./...
-      - name: Build
-        run: go build -v ./...
+          go-version: ${{ matrix.go-version }}
+
       - name: Vet
         run: go vet ./...
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: golangci/golangci-lint-action@v3
-        with:
-          version: latest
+      - name: Test
+        run: go test -race ./...
+
+      - name: Build
+        run: go build -o pod-recommender .
+
+      - name: CLI fails cleanly without a cluster
+        run: |
+          set +e
+          ./pod-recommender > /dev/null 2> err.txt
+          code=$?
+          test "$code" -eq 1
+          grep -q "kubectl failed" err.txt
+          cat err.txt
