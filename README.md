@@ -11,6 +11,15 @@ go build -o pod-recommender .
 ./pod-recommender -o json         # for scripting
 ```
 
+## Install
+
+```bash
+go install github.com/Ankitavasudev/k8s-pod-recommender@v0.1.0
+```
+
+Go 1.21+. Nothing else — `go.mod` has no dependencies. From a clone:
+`go build -o pod-recommender .`
+
 ## What it actually does
 
 For each pod, `Recommend` looks at the first container's CPU/memory requests and
