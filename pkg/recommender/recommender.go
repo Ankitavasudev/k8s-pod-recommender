@@ -13,16 +13,19 @@ import (
 	"strings"
 )
 
-// Pod is the subset of a pod spec the recommender needs.
+// Pod is the subset of a pod spec the recommender needs. The resource fields
+// hold the sum across the pod's containers, because that is what the scheduler
+// reserves for the pod.
 type Pod struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Status    string `json:"status"`
-	Restarts  int    `json:"restarts"`
-	CPUReq    string `json:"cpu_request"`
-	CPULim    string `json:"cpu_limit"`
-	MemReq    string `json:"memory_request"`
-	MemLim    string `json:"memory_limit"`
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace"`
+	Status     string `json:"status"`
+	Restarts   int    `json:"restarts"`
+	Containers int    `json:"containers"`
+	CPUReq     string `json:"cpu_request"`
+	CPULim     string `json:"cpu_limit"`
+	MemReq     string `json:"memory_request"`
+	MemLim     string `json:"memory_limit"`
 }
 
 // Recommendation is one pod's suggested change.
@@ -168,6 +171,11 @@ func FormatMemory(mib float64) string {
 // Order matters: correctness problems (request above limit) are reported first,
 // then missing values, then crash loops, and only then a no-op verdict.
 func Recommend(pod Pod) Recommendation {
+	containers := pod.Containers
+	if containers < 1 {
+		containers = 1
+	}
+
 	rec := Recommendation{
 		Pod:        pod.Name,
 		Namespace:  pod.Namespace,
@@ -195,9 +203,9 @@ func Recommend(pod Pod) Recommendation {
 
 	if cpuReq == 0 && memReq == 0 {
 		rec.Action = "set"
-		rec.RecCPU = FormatCPU(minCPU)
-		rec.RecMem = FormatMemory(minMemMiB)
-		rec.Reason = "No resource requests — the scheduler cannot place this pod fairly"
+		rec.RecCPU = FormatCPU(minCPU * float64(containers))
+		rec.RecMem = FormatMemory(minMemMiB * float64(containers))
+		rec.Reason = fmt.Sprintf("No resource requests on %s — the scheduler cannot place this pod fairly", containerCount(containers))
 		return rec
 	}
 
@@ -208,9 +216,12 @@ func Recommend(pod Pod) Recommendation {
 	}
 
 	if cpuLim > 0 && cpuReq > 0 && cpuLim > cpuReq*4 {
+		// No usage data is available here, so this deliberately suggests no
+		// number. Picking one from the limit would be a guess, and for a pod
+		// with a large burst limit that guess could be far above what the pod
+		// ever uses.
 		rec.Action = "tighten"
-		rec.RecCPU = pod.CPULim
-		rec.Reason = fmt.Sprintf("CPU limit (%s) is more than 4x the request (%s) — throttling is invisible until it is not", pod.CPULim, pod.CPUReq)
+		rec.Reason = fmt.Sprintf("CPU limit (%s) is %.0fx the request (%s) — the scheduler reserves only the request, so this pod is over-committed and evicted first; set the request from measured usage or lower the limit", pod.CPULim, cpuLim/cpuReq, pod.CPUReq)
 		return rec
 	}
 
@@ -220,4 +231,11 @@ func Recommend(pod Pod) Recommendation {
 	}
 
 	return rec
+}
+
+func containerCount(n int) string {
+	if n == 1 {
+		return "1 container"
+	}
+	return fmt.Sprintf("%d containers", n)
 }

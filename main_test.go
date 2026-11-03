@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -152,5 +154,127 @@ func TestRenderDefaultsToText(t *testing.T) {
 	}
 	if !strings.HasPrefix(out, "K8s Pod Resource Recommendations") {
 		t.Errorf("unexpected output: %q", out)
+	}
+}
+
+func TestParsePodsSumsContainers(t *testing.T) {
+	raw := []byte(`{"items": [{
+	  "metadata": {"name": "api", "namespace": "prod"},
+	  "status": {"phase": "Running", "containerStatuses": [{"restartCount": 1}, {"restartCount": 2}]},
+	  "spec": {"containers": [
+	    {"resources": {"requests": {"cpu": "250m", "memory": "256Mi"}, "limits": {"cpu": "1", "memory": "512Mi"}}},
+	    {"resources": {"requests": {"cpu": "50m", "memory": "64Mi"}, "limits": {"cpu": "100m", "memory": "128Mi"}}}
+	  ]}
+	}]}`)
+
+	pods, err := ParsePods(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pods) != 1 {
+		t.Fatalf("expected 1 pod, got %d", len(pods))
+	}
+	pod := pods[0]
+	if pod.Containers != 2 {
+		t.Errorf("expected 2 containers, got %d", pod.Containers)
+	}
+	if pod.CPUReq != "300m" || pod.CPULim != "1.1" {
+		t.Errorf("cpu was not summed: %+v", pod)
+	}
+	if pod.MemReq != "320Mi" || pod.MemLim != "640Mi" {
+		t.Errorf("memory was not summed: %+v", pod)
+	}
+	if pod.Restarts != 3 {
+		t.Errorf("restarts were not summed: %d", pod.Restarts)
+	}
+}
+
+func TestParsePodsLeavesAbsentResourcesEmpty(t *testing.T) {
+	pods, err := ParsePods([]byte(`{"items": [{
+	  "metadata": {"name": "bare", "namespace": "default"},
+	  "spec": {"containers": [{"resources": {}}]}
+	}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pod := pods[0]
+	if pod.CPUReq != "" || pod.CPULim != "" || pod.MemReq != "" || pod.MemLim != "" {
+		t.Errorf("missing resources should stay empty, got %+v", pod)
+	}
+}
+
+func TestReadPodsFromFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pods.json")
+	if err := os.WriteFile(path, []byte(samplePods), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pods, err := readPods(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pods) != 2 {
+		t.Fatalf("expected 2 pods, got %d", len(pods))
+	}
+	if pods[0].Name != "web-0" {
+		t.Errorf("unexpected first pod: %+v", pods[0])
+	}
+}
+
+func TestReadPodsReportsMissingFile(t *testing.T) {
+	if _, err := readPods(filepath.Join(t.TempDir(), "nope.json")); err == nil {
+		t.Fatal("expected an error for a missing file")
+	}
+}
+
+func TestSortRecommendations(t *testing.T) {
+	recs := []recommender.Recommendation{
+		{Namespace: "prod", Pod: "web-1"},
+		{Namespace: "default", Pod: "api"},
+		{Namespace: "prod", Pod: "api"},
+	}
+	sortRecommendations(recs)
+	got := []string{}
+	for _, rec := range recs {
+		got = append(got, rec.Namespace+"/"+rec.Pod)
+	}
+	want := []string{"default/api", "prod/api", "prod/web-1"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestRenderHTML(t *testing.T) {
+	recs := []recommender.Recommendation{
+		{
+			Pod: `<img src=x onerror=alert(1)>`, Namespace: "prod", Action: "set",
+			CurrentCPU: "", CurrentMem: "", RecCPU: "100m", RecMem: "64Mi",
+			Reason: "No resource requests",
+		},
+		{Pod: "ok", Namespace: "prod", Action: "keep", CurrentCPU: "100m", CurrentMem: "64Mi", RecCPU: "100m", RecMem: "64Mi"},
+	}
+
+	out, err := Render(recs, "html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"<!DOCTYPE html>",
+		"<style>",
+		"2 pods inspected",
+		"&lt;img src=x onerror=alert(1)&gt;",
+		"does not read live usage",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("report is missing %q", want)
+		}
+	}
+	if strings.Contains(out, "<script") {
+		t.Error("report contains a script tag")
+	}
+	if strings.Contains(out, `<img src=x`) {
+		t.Error("pod name was not escaped")
+	}
+	if strings.Contains(out, "<link") || strings.Contains(out, `src="http`) {
+		t.Error("report loads an external resource")
 	}
 }

@@ -1,0 +1,221 @@
+{
+  "apiVersion": "v1",
+  "kind": "PodList",
+  "items": [
+    {
+      "metadata": {"name": "checkout-api-7d9f4b8c5-x2vqn", "namespace": "prod"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "api", "restartCount": 0}, {"name": "log-shipper", "restartCount": 0}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "api",
+            "resources": {
+              "requests": {"cpu": "250m", "memory": "256Mi"},
+              "limits": {"cpu": "1", "memory": "512Mi"}
+            }
+          },
+          {
+            "name": "log-shipper",
+            "resources": {
+              "requests": {"cpu": "50m", "memory": "64Mi"},
+              "limits": {"cpu": "100m", "memory": "128Mi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "checkout-api-7d9f4b8c5-q8w2m", "namespace": "prod"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "api", "restartCount": 9}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "api",
+            "resources": {
+              "requests": {"cpu": "250m", "memory": "256Mi"},
+              "limits": {"cpu": "500m", "memory": "512Mi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "payments-worker-0", "namespace": "prod"},
+      "status": {
+        "phase": "Pending",
+        "containerStatuses": [{"name": "worker", "restartCount": 0}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "worker",
+            "resources": {
+              "requests": {"cpu": "1", "memory": "512Mi"},
+              "limits": {"cpu": "500m", "memory": "1Gi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "order-consumer-8f7c6d9b4-tm4pl", "namespace": "prod"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "consumer", "restartCount": 0}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "consumer",
+            "resources": {
+              "requests": {"cpu": "300m", "memory": "1Gi"},
+              "limits": {"cpu": "600m", "memory": "512Mi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "report-renderer-6b9c8d7f5-hz9kl", "namespace": "prod"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "renderer", "restartCount": 0}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "renderer",
+            "resources": {
+              "requests": {"cpu": "100m", "memory": "128Mi"},
+              "limits": {"cpu": "4", "memory": "2Gi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "redis-cache-0", "namespace": "prod"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "redis", "restartCount": 2}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "redis",
+            "resources": {
+              "requests": {"cpu": "500m", "memory": "1Gi"},
+              "limits": {"cpu": "1", "memory": "2Gi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "coredns-5dd5756b68-4kq7p", "namespace": "kube-system"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "coredns", "restartCount": 0}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "coredns",
+            "resources": {
+              "requests": {"cpu": "100m", "memory": "70Mi"},
+              "limits": {"cpu": "200m", "memory": "170Mi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "batch-importer-28917340-jx8wb", "namespace": "staging"},
+      "status": {
+        "phase": "Pending",
+        "containerStatuses": []
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "importer",
+            "resources": {}
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "feature-flags-1", "namespace": "staging"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "flags", "restartCount": 0}, {"name": "metrics", "restartCount": 0}]
+      },
+      "spec": {
+        "containers": [
+          {"name": "flags", "resources": {}},
+          {"name": "metrics", "resources": {}}
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "image-resizer-2xk9p", "namespace": "prod"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "resizer", "restartCount": 3}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "resizer",
+            "resources": {
+              "requests": {"cpu": "200m", "memory": "256Mi"},
+              "limits": {"cpu": "500m", "memory": "512Mi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "notebook-jupyter-0", "namespace": "dev"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "jupyter", "restartCount": 0}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "jupyter",
+            "resources": {
+              "requests": {"cpu": "2", "memory": "4Gi"},
+              "limits": {"cpu": "4", "memory": "8Gi"}
+            }
+          }
+        ]
+      }
+    },
+    {
+      "metadata": {"name": "audit-log-forwarder-5c8d7b6f9-9lmnq", "namespace": "kube-system"},
+      "status": {
+        "phase": "Running",
+        "containerStatuses": [{"name": "forwarder", "restartCount": 1}]
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "forwarder",
+            "resources": {
+              "requests": {"cpu": "50m", "memory": "64Mi"},
+              "limits": {"cpu": "100m", "memory": "128Mi"}
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

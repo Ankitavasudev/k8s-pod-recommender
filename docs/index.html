@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pod resource recommendations</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--text:#e6edf3;--muted:#8b949e;--line:#30363d;--fix:#f85149;--set:#d29922;--investigate:#a371f7;--tighten:#58a6ff;--watch:#3fb950;--keep:#6e7681}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:40px 20px 64px}
+h1{font-size:24px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:28px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:28px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card .n{font-size:24px;font-weight:600}
+.card .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.card.fix .n{color:var(--fix)}
+.card.set .n{color:var(--set)}
+.card.investigate .n{color:var(--investigate)}
+.card.tighten .n{color:var(--tighten)}
+.card.watch .n{color:var(--watch)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:20px}
+h2{font-size:15px;margin:0 0 14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+tr:last-child td{border-bottom:0}
+code{font:13px ui-monospace,SFMono-Regular,Consolas,monospace}
+.pod{white-space:nowrap}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.fix .badge,.badge.fix{color:var(--fix)}
+.set .badge,.badge.set{color:var(--set)}
+.investigate .badge,.badge.investigate{color:var(--investigate)}
+.tighten .badge,.badge.tighten{color:var(--tighten)}
+.watch .badge,.badge.watch{color:var(--watch)}
+.keep .badge,.badge.keep{color:var(--keep)}
+.reason{color:var(--muted);font-size:13px}
+.empty{color:var(--muted);margin:0}
+footer{color:var(--muted);font-size:12px;margin-top:28px}
+</style>
+</head>
+<body>
+<main>
+<h1>Pod resource recommendations</h1>
+<div class="sub">Generated 2026-11-03 10:01 IST &middot; 12 pods inspected &middot; v0.2.0</div>
+<div class="cards">
+<div class="card"><div class="n">12</div><div class="l">Pods</div></div>
+<div class="card fix"><div class="n">2</div><div class="l">fix</div></div><div class="card set"><div class="n">2</div><div class="l">set</div></div><div class="card investigate"><div class="n">1</div><div class="l">investigate</div></div><div class="card tighten"><div class="n">1</div><div class="l">tighten</div></div><div class="card watch"><div class="n">3</div><div class="l">watch</div></div><div class="card keep"><div class="n">3</div><div class="l">keep</div></div>
+</div>
+<section>
+<h2>Recommendations</h2>
+<table>
+<thead><tr><th>Pod</th><th>Current</th><th>Suggested</th><th>Action</th><th>Reason</th></tr></thead>
+<tbody><tr class="keep">
+<td class="pod"><code>dev/notebook-jupyter-0</code></td>
+<td><code>cpu 2</code><br><code>mem 4Gi</code></td>
+<td><code>cpu 2</code><br><code>mem 4Gi</code></td>
+<td><span class="badge">keep</span></td>
+<td class="reason">No change needed</td>
+</tr><tr class="watch">
+<td class="pod"><code>kube-system/audit-log-forwarder-5c8d7b6f9-9lmnq</code></td>
+<td><code>cpu 50m</code><br><code>mem 64Mi</code></td>
+<td><code>cpu 50m</code><br><code>mem 64Mi</code></td>
+<td><span class="badge">watch</span></td>
+<td class="reason">1 restart(s) — not enough evidence to change resources</td>
+</tr><tr class="keep">
+<td class="pod"><code>kube-system/coredns-5dd5756b68-4kq7p</code></td>
+<td><code>cpu 100m</code><br><code>mem 70Mi</code></td>
+<td><code>cpu 100m</code><br><code>mem 70Mi</code></td>
+<td><span class="badge">keep</span></td>
+<td class="reason">No change needed</td>
+</tr><tr class="investigate">
+<td class="pod"><code>prod/checkout-api-7d9f4b8c5-q8w2m</code></td>
+<td><code>cpu 250m</code><br><code>mem 256Mi</code></td>
+<td><code>cpu 250m</code><br><code>mem 256Mi</code></td>
+<td><span class="badge">investigate</span></td>
+<td class="reason">9 restarts — check OOMKilled/evicted events before raising limits</td>
+</tr><tr class="keep">
+<td class="pod"><code>prod/checkout-api-7d9f4b8c5-x2vqn</code></td>
+<td><code>cpu 300m</code><br><code>mem 320Mi</code></td>
+<td><code>cpu 300m</code><br><code>mem 320Mi</code></td>
+<td><span class="badge">keep</span></td>
+<td class="reason">No change needed</td>
+</tr><tr class="watch">
+<td class="pod"><code>prod/image-resizer-2xk9p</code></td>
+<td><code>cpu 200m</code><br><code>mem 256Mi</code></td>
+<td><code>cpu 200m</code><br><code>mem 256Mi</code></td>
+<td><span class="badge">watch</span></td>
+<td class="reason">3 restart(s) — not enough evidence to change resources</td>
+</tr><tr class="fix">
+<td class="pod"><code>prod/order-consumer-8f7c6d9b4-tm4pl</code></td>
+<td><code>cpu 300m</code><br><code>mem 1Gi</code></td>
+<td><code>cpu 300m</code><br><code>mem 1Gi</code></td>
+<td><span class="badge">fix</span></td>
+<td class="reason">Memory request (1Gi) exceeds limit (512Mi)</td>
+</tr><tr class="fix">
+<td class="pod"><code>prod/payments-worker-0</code></td>
+<td><code>cpu 1</code><br><code>mem 512Mi</code></td>
+<td><code>cpu 1</code><br><code>mem 512Mi</code></td>
+<td><span class="badge">fix</span></td>
+<td class="reason">CPU request (1) exceeds limit (500m) — the pod cannot schedule</td>
+</tr><tr class="watch">
+<td class="pod"><code>prod/redis-cache-0</code></td>
+<td><code>cpu 500m</code><br><code>mem 1Gi</code></td>
+<td><code>cpu 500m</code><br><code>mem 1Gi</code></td>
+<td><span class="badge">watch</span></td>
+<td class="reason">2 restart(s) — not enough evidence to change resources</td>
+</tr><tr class="tighten">
+<td class="pod"><code>prod/report-renderer-6b9c8d7f5-hz9kl</code></td>
+<td><code>cpu 100m</code><br><code>mem 128Mi</code></td>
+<td><code>cpu 100m</code><br><code>mem 128Mi</code></td>
+<td><span class="badge">tighten</span></td>
+<td class="reason">CPU limit (4) is 40x the request (100m) — the scheduler reserves only the request, so this pod is over-committed and evicted first; set the request from measured usage or lower the limit</td>
+</tr><tr class="set">
+<td class="pod"><code>staging/batch-importer-28917340-jx8wb</code></td>
+<td><code>cpu &mdash;</code><br><code>mem &mdash;</code></td>
+<td><code>cpu 100m</code><br><code>mem 64Mi</code></td>
+<td><span class="badge">set</span></td>
+<td class="reason">No resource requests on 1 container — the scheduler cannot place this pod fairly</td>
+</tr><tr class="set">
+<td class="pod"><code>staging/feature-flags-1</code></td>
+<td><code>cpu &mdash;</code><br><code>mem &mdash;</code></td>
+<td><code>cpu 200m</code><br><code>mem 128Mi</code></td>
+<td><span class="badge">set</span></td>
+<td class="reason">No resource requests on 2 containers — the scheduler cannot place this pod fairly</td>
+</tr></tbody>
+</table>
+</section>
+<footer>Generated by k8s-pod-recommender v0.2.0. Requests and limits are summed across containers. This tool reads pod specs only; it does not read live usage.</footer>
+</main>
+</body>
+</html>

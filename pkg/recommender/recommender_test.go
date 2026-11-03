@@ -185,6 +185,38 @@ func TestRecommendWideLimit(t *testing.T) {
 	if rec.Action != "tighten" {
 		t.Errorf("expected tighten, got %s", rec.Action)
 	}
+	// Without usage data there is no defensible number to suggest, so the
+	// request must be left alone rather than raised to the limit.
+	if rec.RecCPU != "100m" {
+		t.Errorf("tighten should not invent a request, got %s", rec.RecCPU)
+	}
+	if !strings.Contains(rec.Reason, "over-committed") {
+		t.Errorf("unexpected reason: %s", rec.Reason)
+	}
+}
+
+func TestRecommendMissingRequestsScalesWithContainers(t *testing.T) {
+	tests := []struct {
+		name       string
+		containers int
+		wantCPU    string
+		wantMem    string
+	}{
+		{"single container", 1, "100m", "64Mi"},
+		{"two containers", 2, "200m", "128Mi"},
+		{"unset falls back to one", 0, "100m", "64Mi"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := Recommend(Pod{Name: "bare", Containers: tt.containers})
+			if rec.Action != "set" {
+				t.Fatalf("expected set, got %s", rec.Action)
+			}
+			if rec.RecCPU != tt.wantCPU || rec.RecMem != tt.wantMem {
+				t.Errorf("got %s/%s, want %s/%s", rec.RecCPU, rec.RecMem, tt.wantCPU, tt.wantMem)
+			}
+		})
+	}
 }
 
 func TestRecommendSingleRestart(t *testing.T) {

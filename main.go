@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 
 	"github.com/Ankitavasudev/k8s-pod-recommender/pkg/recommender"
@@ -43,6 +45,9 @@ type podList struct {
 
 // ParsePods turns `kubectl get pods -o json` output into recommender pods.
 // Exported for tests; the command-line path uses it too.
+//
+// Requests and limits are summed across the pod's containers, since a pod is
+// scheduled on the total it reserves, not on any single container.
 func ParsePods(raw []byte) ([]recommender.Pod, error) {
 	var list podList
 	if err := json.Unmarshal(raw, &list); err != nil {
@@ -57,17 +62,45 @@ func ParsePods(raw []byte) ([]recommender.Pod, error) {
 		}
 
 		pod := recommender.Pod{
-			Name:      item.Metadata.Name,
-			Namespace: item.Metadata.Namespace,
-			Status:    item.Status.Phase,
-			Restarts:  restarts,
+			Name:       item.Metadata.Name,
+			Namespace:  item.Metadata.Namespace,
+			Status:     item.Status.Phase,
+			Restarts:   restarts,
+			Containers: len(item.Spec.Containers),
 		}
-		if len(item.Spec.Containers) > 0 {
-			res := item.Spec.Containers[0].Resources
-			pod.CPUReq = res.Requests.CPU
-			pod.CPULim = res.Limits.CPU
-			pod.MemReq = res.Requests.Memory
-			pod.MemLim = res.Limits.Memory
+
+		var cpuReq, cpuLim, memReq, memLim float64
+		var hasCPUReq, hasCPULim, hasMemReq, hasMemLim bool
+		for _, container := range item.Spec.Containers {
+			res := container.Resources
+			if v := recommender.ParseCPU(res.Requests.CPU); v > 0 {
+				cpuReq += v
+				hasCPUReq = true
+			}
+			if v := recommender.ParseCPU(res.Limits.CPU); v > 0 {
+				cpuLim += v
+				hasCPULim = true
+			}
+			if v := recommender.ParseMemory(res.Requests.Memory); v > 0 {
+				memReq += v
+				hasMemReq = true
+			}
+			if v := recommender.ParseMemory(res.Limits.Memory); v > 0 {
+				memLim += v
+				hasMemLim = true
+			}
+		}
+		if hasCPUReq {
+			pod.CPUReq = recommender.FormatCPU(cpuReq)
+		}
+		if hasCPULim {
+			pod.CPULim = recommender.FormatCPU(cpuLim)
+		}
+		if hasMemReq {
+			pod.MemReq = recommender.FormatMemory(memReq)
+		}
+		if hasMemLim {
+			pod.MemLim = recommender.FormatMemory(memLim)
 		}
 		pods = append(pods, pod)
 	}
@@ -99,14 +132,47 @@ func fetchPods(run runner, namespace string) ([]recommender.Pod, error) {
 	return ParsePods(out)
 }
 
-// Render formats recommendations as text or JSON.
+// readPods reads saved `kubectl get pods -o json` output, so the tool can be
+// used on a laptop with no cluster access, in CI, or against a captured
+// incident.
+func readPods(path string) ([]recommender.Pod, error) {
+	var (
+		data []byte
+		err  error
+	)
+	if path == "-" {
+		data, err = io.ReadAll(os.Stdin)
+	} else {
+		data, err = os.ReadFile(path)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read pods: %w", err)
+	}
+	return ParsePods(data)
+}
+
+// sortRecommendations orders by namespace then pod name so that the output of
+// two runs over the same input is identical.
+func sortRecommendations(recs []recommender.Recommendation) {
+	sort.SliceStable(recs, func(i, j int) bool {
+		if recs[i].Namespace != recs[j].Namespace {
+			return recs[i].Namespace < recs[j].Namespace
+		}
+		return recs[i].Pod < recs[j].Pod
+	})
+}
+
+// Render formats recommendations as text, JSON or HTML.
 func Render(recs []recommender.Recommendation, format string) (string, error) {
-	if format == "json" {
+	switch format {
+	case "json":
 		data, err := json.MarshalIndent(recs, "", "  ")
 		if err != nil {
 			return "", err
 		}
 		return string(data), nil
+	case "html":
+		return renderHTML(recs)
 	}
 
 	var b strings.Builder
@@ -120,7 +186,7 @@ func Render(recs []recommender.Recommendation, format string) (string, error) {
 		fmt.Fprintf(&b, "  Action:      %s\n", rec.Action)
 		fmt.Fprintf(&b, "  Reason:      %s\n", rec.Reason)
 	}
-	return b.String(), nil
+	return strings.TrimSuffix(b.String(), "\n"), nil
 }
 
 func orDash(value string) string {
@@ -132,10 +198,25 @@ func orDash(value string) string {
 
 func main() {
 	namespace := flag.String("n", "", "Namespace (empty = all)")
-	output := flag.String("o", "text", "Output format: json, text")
+	output := flag.String("o", "text", "Output format: text, json, html")
+	input := flag.String("f", "", "Read saved `kubectl get pods -o json` output from a file, or - for stdin")
+	showVersion := flag.Bool("version", false, "Print the version and exit")
 	flag.Parse()
 
-	pods, err := fetchPods(kubectl, *namespace)
+	if *showVersion {
+		fmt.Println(versionString())
+		return
+	}
+
+	var (
+		pods []recommender.Pod
+		err  error
+	)
+	if *input != "" {
+		pods, err = readPods(*input)
+	} else {
+		pods, err = fetchPods(kubectl, *namespace)
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -145,6 +226,7 @@ func main() {
 	for _, pod := range pods {
 		recs = append(recs, recommender.Recommend(pod))
 	}
+	sortRecommendations(recs)
 
 	rendered, err := Render(recs, *output)
 	if err != nil {

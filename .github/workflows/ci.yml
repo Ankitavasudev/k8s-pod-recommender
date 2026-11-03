@@ -21,6 +21,9 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - name: Format
+        run: test -z "$(gofmt -l .)"
+
       - name: Vet
         run: go vet ./...
 
@@ -28,12 +31,30 @@ jobs:
         run: go test -race ./...
 
       - name: Build
-        run: go build -o pod-recommender .
+        run: go build -o k8s-pod-recommender .
+
+      - name: Recommend from the bundled fixture
+        run: |
+          ./k8s-pod-recommender -f examples/pods.json > out.txt
+          grep -q "Pod: prod/payments-worker-0" out.txt
+          grep -q "Action:      fix" out.txt
+          grep -q "Action:      set" out.txt
+          ./k8s-pod-recommender -f examples/pods.json -o json > out.json
+          grep -q '"action": "tighten"' out.json
+
+      - name: Check the HTML report
+        run: |
+          ./k8s-pod-recommender -f examples/pods.json -o html > report.html
+          grep -q '<!DOCTYPE html>' report.html
+          grep -q '12 pods inspected' report.html
+          # The report must work offline: no scripts, no external requests.
+          ! grep -q '<script' report.html
+          ! grep -qE '(<link|<img|src="http)' report.html
 
       - name: CLI fails cleanly without a cluster
         run: |
           set +e
-          ./pod-recommender > /dev/null 2> err.txt
+          ./k8s-pod-recommender > /dev/null 2> err.txt
           code=$?
           test "$code" -eq 1
           grep -q "kubectl failed" err.txt
